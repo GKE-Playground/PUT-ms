@@ -6,10 +6,10 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
-  IMAGE_NAME: todo-post-ms
+  IMAGE_NAME: todo-put-ms
   GKE_CLUSTER: todo-gke
   REGION: europe-west4
-  DEPLOYMENT_NAME: todo-post-ms
+  DEPLOYMENT_NAME: todo-put-ms
 
 jobs:
   build-push-gcr:
