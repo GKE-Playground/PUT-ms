@@ -25,42 +25,50 @@ const DB_NAME = process.env["DB_NAME"];
 const DB_PASSWORD = process.env["DB_PASS"];
 const DB_PORT = process.env["DB_PORT"];
 
-const pool = new Pool({
-  user: Buffer.from(String(DB_USER), "base64").toString("ascii"),
-  host: DB_HOST,
-  database: Buffer.from(String(DB_NAME), "base64").toString("ascii"),
-  password: Buffer.from(String(DB_PASSWORD), "base64").toString("ascii"),
-  port: Number(DB_PORT),
-});
+let pool: pg.Pool;
+
+if (process.env["NODE_ENV"] === "production") {
+  pool = new Pool({
+    user: Buffer.from(String(DB_USER), "base64").toString("ascii"),
+    host: DB_HOST,
+    database: Buffer.from(String(DB_NAME), "base64").toString("ascii"),
+    password: Buffer.from(String(DB_PASSWORD), "base64").toString("ascii"),
+    port: Number(DB_PORT),
+  });
+} else {
+  pool = new Pool({
+    user: DB_USER,
+    host: DB_HOST,
+    database: DB_NAME,
+    password: DB_PASSWORD,
+    port: Number(DB_PORT),
+  });
+}
 
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get("/", (_req: Request, res: Response) => {
-  res.send("GET ms. Hello World!");
+  res.send("PUT ms. Hello World!");
 });
 
-app.get("/getData", async (_req: Request, res: Response) => {
+app.delete("/deleteData/:id", async (req: Request, res: Response) => {
   try {
-    // Run the select query using the pool
-    const queryResult = await pool.query("SELECT * FROM todos");
+    const queryResult = await pool.query(
+      "DELETE FROM todos WHERE id = 1 RETURNING *",
+      [ req.params["id"] ],
+    );
+    console.log(queryResult.rows);
+    if (queryResult.rows.length === 0) {
+      return res.status(404).json({ error: "Todo not found." });
+    }
 
-    // Send the query results as JSON
-    res.json(queryResult.rows);
+    res.json({ message: "Todo deleted successfully." });
   } catch (error) {
-    console.error("Error running query", error);
-    res.status(500).json({
-      error: error,
-      env: {
-        DB_USER: DB_USER,
-        DB_HOST: DB_HOST,
-        DB_NAME: DB_NAME,
-        DB_PASSWORD: DB_PASSWORD,
-        DB_PORT: DB_PORT,
-      },
-    });
+    return res.status(500).json({ error: error });
   }
+  return null;
 });
 
 app.use(function (_req: Request, _res: Response, next: NextFunction) {
